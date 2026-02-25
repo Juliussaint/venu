@@ -1,0 +1,23 @@
+{% if success %}
+<div class="bg-green-50 border-l-4 border-green-400 p-4 rounded-r-lg animate-pulse">
+    <div class="flex items-center">
+        <div class="text-green-500 text-2xl mr-3">✅</div>
+        <div>
+            <p class="font-bold text-green-800">{{ message }}</p>
+            <p class="text-sm text-green-700">{{ registration.participant.name }}</p>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+    <div class="flex items-center">
+        <div class="text-red-500 text-2xl mr-3">🚫</div>
+        <div>
+            <p class="font-bold text-red-800">{{ message }}</p>
+            <p class="text-sm text-red-700">
+                {% if registration %}{{ registration.participant.name }}{% endif %}
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}

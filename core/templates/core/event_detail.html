@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block content %}
+{% if user.is_staff %}
+<div class="max-w-4xl mx-auto mb-4">
+    <a href="{% url 'core:event-dashboard' event.pk %}" class="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg bg-indigo-100 text-indigo-700 hover:bg-indigo-200">
+        &larr; Back to Management Dashboard
+    </a>
+</div>
+{% endif %}
+<div class="py-12 sm:py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Hero Section -->
+        <div class="bg-white rounded-3xl shadow-sm ring-1 ring-zinc-200 overflow-hidden">
+            {% if event.cover_image %}
+            <img src="{{ event.cover_image.url }}" class="w-full h-64 sm:h-80 object-cover" alt="{{ event.title }}">
+            {% endif %}
+            
+            <div class="p-6 sm:p-10">
+                <!-- Meta Tags -->
+                <div class="flex flex-wrap items-center gap-3 mb-4">
+                    <span class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
+                        {{ event.start_date }}
+                    </span>
+                    <span class="inline-flex items-center rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700">
+                        {{ event.location }}
+                    </span>
+                </div>
+
+                <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 mb-4">
+                    {{ event.title }}
+                </h1>
+
+                <div class="prose prose-lg max-w-none text-zinc-600 mb-8">
+                    {{ event.description|linebreaks }}
+                </div>
+
+                <!-- Schedule Section -->
+                <div class="border-t border-zinc-200 pt-8">
+                    <h2 class="text-2xl font-bold text-zinc-900 mb-6">Event Schedule</h2>
+                    
+                    <div class="space-y-4">
+                        {% for session in sessions %}
+                        <!-- Session Card -->
+                        <div class="flex flex-col sm:flex-row gap-4 p-4 bg-zinc-50 rounded-xl hover:bg-indigo-50 transition-colors group">
+                            <div class="w-full sm:w-1/4 flex items-center justify-start sm:justify-center">
+                                <div class="text-center">
+                                    <div class="text-sm font-bold text-indigo-600">{{ session.start_time|time:"H:i" }}</div>
+                                    <div class="text-xs text-zinc-400">to {{ session.end_time|time:"H:i" }}</div>
+                                </div>
+                            </div>
+                            <div class="flex-grow">
+                                <h3 class="font-bold text-zinc-800 group-hover:text-indigo-700">{{ session.title }}</h3>
+                                {% if session.speaker %}
+                                <p class="text-sm text-zinc-500 mt-1">Speaker: <span class="font-medium">{{ session.speaker }}</span></p>
+                                {% endif %}
+                                {% if session.description %}
+                                <p class="text-sm text-zinc-600 mt-2">{{ session.description }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center text-zinc-400 py-6">
+                            Schedule to be announced.
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                {% if event.is_published %}
+                <div class="mt-10 text-center border-t border-zinc-200 pt-8">
+                    <a href="{% url 'core:event-register' event.slug %}" class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-8 py-3.5 text-base font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-all duration-150 hover:scale-105">
+                        Register Now
+                        <svg class="ml-2 -mr-1 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

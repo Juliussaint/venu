@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="py-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Header -->
+        <div class="pb-5 border-b border-zinc-200 sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-zinc-900">{{ event.title }}</h1>
+                <p class="mt-2 text-sm text-zinc-500">Manage registrations and view statistics.</p>
+            </div>
+            <div class="mt-3 sm:mt-0 sm:ml-4 flex gap-3">
+                <!-- NEW: Check-In Button -->
+                <a href="{% url 'core:staff-checkin' event.pk %}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                    🔍 Open Scanner
+                </a>
+            </div>
+            <div class="mt-3 sm:mt-0 sm:ml-4">
+                <a href="{% url 'core:event-detail' event.slug %}" class="text-sm text-indigo-600 hover:underline">View Public Page &rarr;</a>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-3">
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-zinc-500 truncate">Total Registered</dt>
+                    <dd class="mt-1 text-3xl font-semibold text-zinc-900">{{ total_count }}</dd>
+                </div>
+            </div>
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-zinc-500 truncate">Approved</dt>
+                    <dd class="mt-1 text-3xl font-semibold text-green-600">{{ approved_count }}</dd>
+                </div>
+            </div>
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-zinc-500 truncate">Pending</dt>
+                    <dd class="mt-1 text-3xl font-semibold text-yellow-600">{{ pending_count }}</dd>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="mt-8 border-b border-zinc-200">
+            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                <a href="?status=all" class="{% if status_filter == 'all' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-zinc-500 hover:text-zinc-700 hover:border-zinc-300{% endif %} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    All
+                </a>
+                <a href="?status=pending" class="{% if status_filter == 'pending' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-zinc-500 hover:text-zinc-700 hover:border-zinc-300{% endif %} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Pending
+                </a>
+                <a href="?status=approved" class="{% if status_filter == 'approved' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-zinc-500 hover:text-zinc-700 hover:border-zinc-300{% endif %} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Approved
+                </a>
+                <a href="?status=rejected" class="{% if status_filter == 'rejected' %}border-indigo-500 text-indigo-600{% else %}border-transparent text-zinc-500 hover:text-zinc-700 hover:border-zinc-300{% endif %} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Rejected
+                </a>
+            </nav>
+        </div>
+
+        <!-- Table -->
+        <div class="mt-6 flow-root">
+            <div class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
+                <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+                    <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
+                        <table class="min-w-full divide-y divide-zinc-300">
+                            <thead class="bg-zinc-50">
+                                <tr>
+                                    <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-zinc-900 sm:pl-6">Participant</th>
+                                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-zinc-900">Status</th>
+                                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-zinc-900">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-zinc-200 bg-white">
+                                {% for reg in registrations %}
+                                    {% include 'core/dashboard/partials/registration_row.html' %}
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="3" class="text-center py-10 text-zinc-500">
+                                            No registrations found for this filter.
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

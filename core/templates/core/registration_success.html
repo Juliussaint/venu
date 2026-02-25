@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="py-12 sm:py-16">
+    <div class="max-w-xl mx-auto bg-white p-8 rounded-lg shadow-md text-center">
+        
+        <!-- 1. STATUS ICON (Always visible) -->
+        <div class="mb-4">
+            {% if registration.status == 'approved' %}
+                <!-- Green Checkmark for Approved -->
+                <div class="text-green-500">
+                    <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+            {% else %}
+                <!-- Yellow Clock for Pending -->
+                <div class="text-yellow-500">
+                    <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- 2. TITLE -->
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">
+            {% if registration.status == 'approved' %}
+                Registration Confirmed!
+            {% else %}
+                Registration Submitted!
+            {% endif %}
+        </h1>
+        
+        <p class="text-gray-600 mb-6">Thank you for registering for {{ registration.event.title }}.</p>
+
+        <!-- 3. REFERENCE CODE -->
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+            <p class="text-xs text-gray-500 mb-1">Reference Code</p>
+            <p class="text-sm text-gray-800 font-mono select-all">{{ registration.uuid }}</p>
+        </div>
+
+        <!-- 4. ACTION BUTTONS (Grouped together) -->
+        <div class="space-y-3 mb-6">
+            {% if registration.status == 'approved' %}
+                <!-- Primary Action: Download PDF -->
+                <a href="{% url 'core:download-ticket' registration.uuid %}" class="w-full inline-flex justify-center items-center rounded-lg bg-indigo-600 px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Download Ticket (PDF)
+                </a>
+            {% endif %}
+
+            <!-- Secondary Action: View Online -->
+            <a href="{% url 'core:registration-detail' registration.uuid %}" class="w-full inline-flex justify-center items-center rounded-lg bg-white px-6 py-3 text-base font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-colors">
+                View Online Ticket &rarr;
+            </a>
+        </div>
+
+        <!-- 5. FOOTER MESSAGE -->
+        {% if registration.status == 'approved' %}
+            <p class="text-green-600 text-sm font-medium bg-green-50 p-3 rounded-lg">You are fully registered. See you there!</p>
+        {% else %}
+            <p class="text-yellow-700 text-sm bg-yellow-50 p-3 rounded-lg">Your registration is pending review. We will notify you once approved.</p>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

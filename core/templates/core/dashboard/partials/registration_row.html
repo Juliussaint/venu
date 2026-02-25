@@ -1,0 +1,45 @@
+<tr class="hover:bg-zinc-50 transition-colors">
+    <td class="px-6 py-4 whitespace-nowrap">
+        <div class="text-sm font-medium text-zinc-900">{{ reg.participant.name }}</div>
+        <div class="text-sm text-zinc-500">{{ reg.participant.email }}</div>
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap">
+        {% if reg.status == 'approved' %}
+            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Approved</span>
+        {% elif reg.status == 'rejected' %}
+            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Rejected</span>
+        {% else %}
+            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending</span>
+        {% endif %}
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm">
+        {% if reg.status == 'pending' %}
+            <button hx-post="{% url 'core:approve-registration' reg.pk %}" 
+                    hx-target="closest tr" 
+                    hx-swap="outerHTML"
+                    class="text-indigo-600 hover:text-indigo-900 font-medium mr-3">
+                Approve
+            </button>
+            <button hx-post="{% url 'core:reject-registration' reg.pk %}" 
+                    hx-target="closest tr" 
+                    hx-swap="outerHTML"
+                    class="text-red-600 hover:text-red-900 font-medium">
+                Reject
+            </button>
+        {% elif reg.status == 'approved' %}
+             <button hx-post="{% url 'core:reject-registration' reg.pk %}" 
+                    hx-target="closest tr" 
+                    hx-swap="outerHTML"
+                    class="text-red-600 hover:text-red-900 text-xs">
+                Undo (Reject)
+            </button>
+        {% else %}
+             <button hx-post="{% url 'core:approve-registration' reg.pk %}" 
+                    hx-target="closest tr" 
+                    hx-swap="outerHTML"
+                    class="text-indigo-600 hover:text-indigo-900 text-xs">
+                Undo (Approve)
+            </button>
+        {% endif %}
+    </td>
+</tr>

@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="py-10">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Header -->
+        <div class="text-center mb-10">
+            <h1 class="text-3xl font-bold text-zinc-900">{{ event.title }}</h1>
+            <p class="text-zinc-600 mt-1">Welcome, {{ registration.participant.name }}</p>
+            
+            <!-- Quick Link to Ticket -->
+            <a href="{% url 'core:registration-detail' registration.uuid %}" class="inline-block mt-4 text-sm bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full hover:bg-indigo-100">
+                View My Ticket &rarr;
+            </a>
+        </div>
+
+        <!-- Resources Section -->
+        <div class="bg-white rounded-2xl shadow ring-1 ring-zinc-200 overflow-hidden">
+            <div class="p-6 border-b border-zinc-100">
+                <h2 class="text-xl font-semibold text-zinc-900">Event Materials</h2>
+                <p class="text-sm text-zinc-500">Download presentations and resources.</p>
+            </div>
+
+            <div class="divide-y divide-zinc-100">
+                {% for resource in resources %}
+                    {% if resource.id in locked_resources %}
+                        <!-- LOCKED STATE -->
+                        <div class="p-4 flex items-center justify-between bg-zinc-50 text-zinc-400 cursor-not-allowed">
+                            <div class="flex items-center">
+                                <div class="mr-4">
+                                    <!-- Lock Icon -->
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                                </div>
+                                <div>
+                                    <p class="font-medium">{{ resource.title }}</p>
+                                    <p class="text-xs mt-0.5">
+                                        {% if resource.unlock_time and now < resource.unlock_time %}
+                                            Unlocks at: {{ resource.unlock_time }}
+                                        {% elif resource.requires_check_in %}
+                                            Requires Check-In
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            <span class="text-xs font-semibold uppercase tracking-wide">Locked</span>
+                        </div>
+                    {% else %}
+                        <!-- UNLOCKED STATE -->
+                        <div class="p-4 flex items-center justify-between hover:bg-zinc-50 transition-colors group">
+                            <div class="flex items-center">
+                                <div class="mr-4 text-indigo-500">
+                                    {% if resource.resource_type == 'pdf' %}
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                                    {% elif resource.resource_type == 'video' %}
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    {% else %}
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <p class="font-medium text-zinc-900 group-hover:text-indigo-600">{{ resource.title }}</p>
+                                    <p class="text-xs text-zinc-500 mt-0.5">{{ resource.get_resource_type_display }}</p>
+                                </div>
+                            </div>
+                            <a href="{% url 'core:secure-download' registration.uuid resource.id %}" target="_blank" class="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 shadow-sm">
+                                Download
+                            </a>
+                        </div>
+                    {% endif %}
+                {% empty %}
+                    <div class="p-10 text-center text-zinc-400">
+                        No resources uploaded yet.
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="py-12 sm:py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Header Section -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-zinc-900">
+                Upcoming Events
+            </h1>
+            <p class="mt-3 text-lg text-zinc-500">
+                Discover and register for the latest seminars and workshops.
+            </p>
+        </div>
+
+        <!-- Grid Layout -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for event in events %}
+            <article class="group relative bg-white rounded-2xl shadow-sm ring-1 ring-zinc-200 overflow-hidden hover:shadow-lg hover:ring-indigo-300 transition-all duration-300">
+                
+                <!-- Image Container -->
+                <div class="aspect-[16/9] bg-zinc-100 overflow-hidden">
+                    {% if event.cover_image %}
+                    <img src="{{ event.cover_image.url }}" alt="{{ event.title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                    {% else %}
+                    <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-50 to-zinc-100">
+                        <span class="text-zinc-400 font-semibold">No Image Available</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Content -->
+                <div class="p-5">
+                    <div class="flex items-center gap-x-2 text-xs text-zinc-500 mb-2">
+                        <span class="font-semibold text-indigo-600">{{ event.start_date }}</span>
+                        <span>&bull;</span>
+                        <span>{{ event.location }}</span>
+                    </div>
+                    
+                    <h3 class="text-xl font-bold text-zinc-900 mb-2 group-hover:text-indigo-600 transition-colors">
+                        {{ event.title }}
+                    </h3>
+                    
+                    <p class="text-sm text-zinc-600 line-clamp-2 mb-4">
+                        {{ event.description|truncatewords:15 }}
+                    </p>
+
+                    <a href="{{ event.get_absolute_url }}" class="inline-flex items-center text-sm font-semibold text-indigo-600 hover:text-indigo-500">
+                        View Details
+                        <svg class="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </a>
+                </div>
+            </article>
+            {% empty %}
+            <div class="col-span-full text-center py-16">
+                <div class="bg-white rounded-2xl p-8 ring-1 ring-zinc-200 max-w-md mx-auto">
+                    <h3 class="font-medium text-zinc-900">No Events Scheduled</h3>
+                    <p class="mt-1 text-sm text-zinc-500">Check back soon for updates!</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

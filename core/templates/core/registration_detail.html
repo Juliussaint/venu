@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="py-12 sm:py-16">
+    <div class="max-w-lg mx-auto px-4">
+        
+        <div class="bg-white rounded-3xl shadow-xl ring-1 ring-zinc-200 overflow-hidden text-center">
+            
+            <!-- Header / Banner -->
+            <div class="bg-indigo-600 p-6 text-white">
+                <h1 class="text-2xl font-bold">{{ registration.event.title }}</h1>
+                <p class="text-indigo-100 mt-1">{{ registration.event.location }}</p>
+                <p class="text-sm mt-1">{{ registration.event.start_date }}</p>
+            </div>
+
+            <!-- Ticket Body -->
+            <div class="p-6 space-y-6">
+                
+                <!-- Status Badge -->
+                <div>
+                    {% if registration.status == 'approved' %}
+                        <span class="inline-flex items-center rounded-full bg-green-100 px-4 py-1.5 text-sm font-semibold text-green-700 ring-1 ring-inset ring-green-600/20">
+                            Confirmed
+                        </span>
+                    {% elif registration.status == 'rejected' %}
+                        <span class="inline-flex items-center rounded-full bg-red-100 px-4 py-1.5 text-sm font-semibold text-red-700 ring-1 ring-inset ring-red-600/20">
+                            Rejected
+                        </span>
+                    {% else %}
+                        <span class="inline-flex items-center rounded-full bg-yellow-100 px-4 py-1.5 text-sm font-semibold text-yellow-700 ring-1 ring-inset ring-yellow-600/20">
+                            Pending Approval
+                        </span>
+                    {% endif %}
+                </div>
+
+                <!-- Participant Info -->
+                <div class="text-left border-t border-b border-zinc-100 py-4 space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-zinc-500 text-sm">Name</span>
+                        <span class="font-medium text-zinc-900">{{ registration.participant.name }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-zinc-500 text-sm">Email</span>
+                        <span class="font-medium text-zinc-900 text-sm">{{ registration.participant.email }}</span>
+                    </div>
+                </div>
+
+                <!-- QR Code & UUID Area (Cleaned Up) -->
+                lass="bg-zinc-50 rounded-xl p-6 flex flex-col items-center">
+                    {% if registration.status == 'approved' %}
+                        <img src="{% url 'core:registration-qr' registration.uuid %}" alt="QR Code" class="w-40 h-40 mx-auto bg-white p-2 rounded-lg shadow-sm ring-1 ring-zinc-100">
+                        <p class="text-xs text-zinc-500 mt-3">Scan this at the entrance</p>
+                    {% else %}
+                        <div class="w-40 h-40 mx-auto bg-zinc-200 flex items-center justify-center rounded-lg">
+                            <span class="text-zinc-400 text-xs text-center px-4">QR Code will appear once approved</span>
+                        </div>
+                    {% endif %}
+
+                    <div class="mt-4 border-t border-zinc-200 pt-4 w-full">
+                        <p class="text-xs text-zinc-400 mb-1">Reference Code</p>
+                        <p class="font-mono text-xs text-zinc-600 select-all">{{ registration.uuid }}</p>
+                    </div>
+                </div>
+
+                <!-- Actions Group -->
+                <div class="space-y-3">
+                    <a href="{% url 'core:download-ticket' registration.uuid %}" 
+                       class="w-full inline-flex justify-center items-center rounded-xl bg-zinc-900 px-4 py-3 text-base font-semibold text-white shadow-sm hover:bg-zinc-800 transition-colors">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                        Download PDF Ticket
+                    </a>
+
+                    <a href="{% url 'core:participant-portal' registration.uuid %}" 
+                       class="w-full inline-flex justify-center items-center rounded-xl bg-indigo-600 px-4 py-3 text-base font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors">
+                        View Event Materials &rarr;
+                    </a>
+                </div>
+        </div>
+
+        <p class="text-center text-xs text-zinc-400 mt-4">
+            Download your ticket as proof of registration.
+        </p>
+
+    </div>
+</div>
+{% endblock %}

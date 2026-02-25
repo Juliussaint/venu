@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-lg mx-auto py-10">
+    <div class="text-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Event Scanner</h1>
+        <p class="text-gray-600">{{ event.title }}</p>
+        
+        <!-- Status Badge -->
+        <div class="mt-2 inline-block px-3 py-1 rounded-full text-sm font-medium
+            {% if active_session %} bg-green-100 text-green-800 {% else %} bg-red-100 text-red-800 {% endif %}">
+            {% if active_session %}
+                Checking in for: {{ active_session.title }}
+            {% else %}
+                No Active Session
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Scanner Box -->
+    <div class="bg-white rounded-xl shadow-lg p-4 ring-1 ring-zinc-200 mb-4">
+        <div id="reader" class="w-full aspect-video bg-zinc-900 rounded-lg overflow-hidden"></div>
+        
+        <div class="flex gap-2 mt-4">
+            <button id="start-scan-btn" onclick="startScanner()" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700">
+                Start Camera
+            </button>
+            <button id="stop-scan-btn" onclick="stopScanner()" class="flex-1 bg-zinc-200 text-zinc-700 py-2 rounded-lg font-medium hover:bg-zinc-300 hidden">
+                Stop Camera
+            </button>
+        </div>
+    </div>
+
+    <!-- Result Area (Populated by HTMX) -->
+    <div id="check-result" class="mb-4">
+        <!-- Result appears here -->
+    </div>
+
+    <!-- Manual Input Fallback -->
+    <details class="bg-white rounded-xl shadow p-4 ring-1 ring-zinc-200">
+        <summary class="text-sm font-medium text-zinc-600 cursor-pointer">Manual Input (If camera fails)</summary>
+        <form onsubmit="event.preventDefault(); 
+                        var input = document.getElementById('uuid-input');
+                        var url = '/scan/' + input.value + '/';
+                        htmx.ajax('POST', url, {target: '#check-result'});"
+              class="mt-3 flex gap-2">
+            
+            <input type="text" id="uuid-input" placeholder="Paste UUID here..." 
+                   class="flex-grow block rounded-lg border-0 py-2 px-3 text-zinc-900 ring-1 ring-zinc-300 focus:ring-2 focus:ring-indigo-600 text-xs font-mono">
+            <button type="submit" class="px-4 py-2 bg-zinc-800 text-white rounded-lg text-sm font-medium">
+                Check In
+            </button>
+        </form>
+    </details>
+
+</div>
+
+<!-- Include the Scanner Library -->
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+<script>
+    let html5QrCode = null;
+    let isScanning = false;
+
+    function startScanner() {
+        if (isScanning) return;
+
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        
+        // Initialize
+        html5QrCode = new Html5Qrcode("reader");
+
+        html5QrCode.start(
+            { facingMode: "environment" }, // Use back camera
+            config,
+            onScanSuccess,
+            onScanFailure
+        ).then(() => {
+            isScanning = true;
+            document.getElementById('start-scan-btn').classList.add('hidden');
+            document.getElementById('stop-scan-btn').classList.remove('hidden');
+        }).catch((err) => {
+            console.error("Camera Error:", err);
+            document.getElementById('check-result').innerHTML = `
+                <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                    <p class="text-red-800 font-medium">Could not start camera.</p>
+                    <p class="text-red-700 text-sm">Please ensure camera permissions are allowed.</p>
+                </div>
+            `;
+        });
+    }
+
+    function stopScanner() {
+        if (!isScanning || !html5QrCode) return;
+
+        html5QrCode.stop().then(() => {
+            isScanning = false;
+            document.getElementById('start-scan-btn').classList.remove('hidden');
+            document.getElementById('stop-scan-btn').classList.add('hidden');
+        }).catch((err) => {
+            console.error("Stop Error:", err);
+        });
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+        // decodedText is the URL encoded in the QR (e.g., http://localhost:8000/scan/UUID/)
+        
+        // We need to extract the UUID from the URL
+        // URL format: .../scan/<uuid>/
+        const parts = decodedText.split('/');
+        const uuid = parts[parts.length - 2] || parts[parts.length - 1];
+
+        if (uuid && uuid.length === 36) { // Basic UUID length check
+            console.log("Scanned UUID:", uuid);
+            
+            // Stop scanner temporarily to prevent double scanning
+            stopScanner();
+
+            // Trigger HTMX POST request
+            const url = `/scan/${uuid}/`;
+            htmx.ajax('POST', url, { target: '#check-result' });
+        } else {
+            console.warn("Invalid QR Code content", decodedText);
+        }
+    }
+
+    function onScanFailure(error) {
+        // Ignore frequent "no QR code found" errors
+        // console.warn(`Code scan error = ${error}`);
+    }
+</script>
+{% endblock %}
