@@ -25,10 +25,13 @@ STATICFILES_DIRS = [
 
 
 MEDIA_URL = 'https://media.venu.gpibimanuelcimahi.org/'
-MEDIA_ROOT = 'home/gpibima1/media.venu.gpibimanuelcimahi'
+MEDIA_ROOT = '/home/gpibima1/media.venu.gpibimanuelcimahi'
 
 
 STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },

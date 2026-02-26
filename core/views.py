@@ -17,8 +17,12 @@ from io import BytesIO
 from django.utils import timezone
 from django.contrib import messages
 
-from django.template.loader import render_to_string
-from weasyprint import HTML
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import cm
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
 from django.core.files.storage import default_storage
 from wsgiref.util import FileWrapper
@@ -257,30 +261,162 @@ def process_check_in(request, uuid):
 
 
 def download_ticket_pdf(request, uuid):
-    """
-    Generates a PDF ticket for the participant to download.
-    """
     registration = get_object_or_404(Registration, uuid=uuid)
 
-    # 1. Render the HTML template to a string
-    # Note: We will create a simplified template 'ticket_pdf.html' for the PDF layout
-    html_string = render_to_string('core/ticket_pdf.html', {
-        'registration': registration,
-        'request': request # Pass request for absolute URLs (images/css)
-    })
+    # 1. Create a file-like buffer to receive PDF data.
+    buffer = BytesIO()
 
-    # 2. Create PDF object
-    # base_url is crucial for loading static files (CSS/Images) in the PDF
-    html = HTML(string=html_string, base_url=request.build_absolute_uri())
+    # 2. Create the PDF object, using the buffer as its "file."
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=2*cm,
+        leftMargin=2*cm,
+        topMargin=2*cm,
+        bottomMargin=2*cm
+    )
 
-    # 3. Generate PDF
-    pdf_file = html.write_pdf()
-
-    # 4. Return as downloadable attachment
-    response = HttpResponse(pdf_file, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="VENU_Ticket_{registration.event.title}.pdf"'
+    # Container for the 'Flowable' objects (elements)
+    elements = []
     
+    # Styles
+    styles = getSampleStyleSheet()
+    
+    INDIGO = colors.HexColor('#4F46E5') # Tailwind Indigo-600
+    GREY = colors.grey
+    LIGHT_GREY = colors.lightgrey if hasattr(colors, 'lightgrey') else colors.HexColor('#D3D3D3')
+
+    # Custom Styles
+    title_style = ParagraphStyle(
+        'Title',
+        parent=styles['Heading1'],
+        fontSize=24,
+        textColor=INDIGO,
+        alignment=TA_CENTER,
+        spaceAfter=10
+    )
+    
+    subtitle_style = ParagraphStyle(
+        'Subtitle',
+        parent=styles['Normal'],
+        fontSize=12,
+        textColor=GREY,
+        alignment=TA_CENTER,
+        spaceAfter=20
+    )
+
+    header_style = ParagraphStyle(
+        'Header',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=colors.black,
+        alignment=TA_LEFT
+    )
+
+    # --- CONTENT GENERATION ---
+
+    # Event Title
+    elements.append(Paragraph(registration.event.title, title_style))
+    
+    # Event Details
+    event_info = f"{registration.event.location} | {registration.event.start_date}"
+    elements.append(Paragraph(event_info, subtitle_style))
+    
+    elements.append(Spacer(1, 20))
+
+    # Status Badge Logic
+    if registration.status == 'approved':
+        status_text = "CONFIRMED"
+        status_color = colors.green
+    else:
+        status_text = "PENDING APPROVAL"
+        status_color = colors.orange
+
+    # Create a small table for the status
+    status_data = [[status_text]]
+    status_table = Table(status_data, colWidths=[8*cm])
+    status_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), status_color),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 14),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('TOPPADDING', (0, 0), (-1, -1), 12),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ROUNDEDCORNERS', [5, 5, 5, 5]), # Not supported in all ReportLab versions, acts as border
+    ]))
+    elements.append(status_table)
+    
+    elements.append(Spacer(1, 30))
+
+    # Participant Info Table
+    data = [
+        ['Name:', registration.participant.name],
+        ['Email:', registration.participant.email],
+        ['Reference:', str(registration.uuid)],
+    ]
+
+    info_table = Table(data, colWidths=[4*cm, 12*cm])
+    info_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 11),
+        ('TEXTCOLOR', (0, 0), (0, -1), colors.grey),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ('ALIGN', (0, 0), (0, -1), 'RIGHT'), # Align labels right
+        ('ALIGN', (1, 0), (1, -1), 'LEFT'),  # Align values left
+    ]))
+    elements.append(info_table)
+
+    elements.append(Spacer(1, 40))
+
+    # QR CODE GENERATION
+    if registration.status == 'approved':
+        # Generate QR Code
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=2,
+        )
+        scan_url = request.build_absolute_uri(f"/scan/{registration.uuid}/")
+        qr.add_data(scan_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+
+        # Save QR image to buffer
+        img_buffer = BytesIO()
+        img.save(img_buffer, format='PNG')
+        img_buffer.seek(0)
+        
+        # Add Image to PDF
+        # We use ReportLab's Image class
+        qr_image = Image(img_buffer, width=6*cm, height=6*cm)
+        qr_image.hAlign = 'CENTER'
+        elements.append(qr_image)
+        
+        elements.append(Spacer(1, 10))
+        elements.append(Paragraph("Scan this at the entrance", subtitle_style))
+    else:
+        elements.append(Paragraph("QR Code will appear once approved", subtitle_style))
+
+    # Footer
+    elements.append(Spacer(1, 50))
+    footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=LIGHT_GREY, alignment=TA_CENTER)
+    elements.append(Paragraph("Powered by VENU Platform", footer_style))
+
+    # 3. Build the PDF
+    doc.build(elements)
+
+    # 4. Get the value of the BytesIO buffer and write it to the response.
+    pdf = buffer.getvalue()
+    buffer.close()
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="VENU_Ticket_{registration.event.title}.pdf"'
+    response.write(pdf)
     return response
+
 
 def participant_portal(request, uuid):
     """
