@@ -27,6 +27,9 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from django.core.files.storage import default_storage
 from wsgiref.util import FileWrapper
 
+from django.db.models import Count, Q
+
+import csv
 
 class EventListView(ListView):
     model = Event
@@ -129,15 +132,38 @@ class EventDashboardView(StaffRequiredMixin, DetailView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        registrations = self.object.registrations.all().select_related('participant')
+        event = self.object
         
-        # Stats for cards
-        context['total_count'] = registrations.count()
-        context['approved_count'] = registrations.filter(status='approved').count()
-        context['pending_count'] = registrations.filter(status='pending').count()
+        # Optimization: One query for counts
+        regs = event.registrations.all()
+        total = regs.count()
+        approved = regs.filter(status='approved').count()
+        pending = regs.filter(status='pending').count()
         
-        # Filter logic
+        # Attendance Count
+        checked_in = Attendance.objects.filter(session__event=event).count()
+        
+        # Calculate Percentage (Avoid division by zero)
+        if total > 0:
+            approval_rate = int((approved / total) * 100)
+        else:
+            approval_rate = 0
+            
+        if approved > 0:
+            checkin_rate = int((checked_in / approved) * 100)
+        else:
+            checkin_rate = 0
+
+        context['total_count'] = total
+        context['approved_count'] = approved
+        context['pending_count'] = pending
+        context['checked_in_count'] = checked_in
+        context['approval_rate'] = approval_rate
+        context['checkin_rate'] = checkin_rate
+        
+        # Filter logic for list
         status_filter = self.request.GET.get('status', 'all')
+        registrations = regs.select_related('participant')
         if status_filter != 'all':
             registrations = registrations.filter(status=status_filter)
             
@@ -259,6 +285,73 @@ def process_check_in(request, uuid):
         'registration': registration
     })
 
+def self_check_in(request, uuid, session_id):
+    """
+    Allows a participant to check themselves in for an active session.
+    """
+    registration = get_object_or_404(Registration, uuid=uuid)
+    session = get_object_or_404(Session, pk=session_id)
+    
+    # 1. Validation: Is registration approved?
+    if registration.status != 'approved':
+        messages.error(request, "Your registration must be approved to check in.")
+        return redirect('core:participant-portal', uuid=uuid)
+
+    # 2. Validation: Is session active?
+    now = timezone.now()
+    # Allow check-in 5 minutes before start until end time
+    if not (session.start_time <= now <= session.end_time):
+        messages.error(request, "This session is not currently active for check-in.")
+        return redirect('core:participant-portal', uuid=uuid)
+
+    # 3. Validation: Duplicate?
+    if Attendance.objects.filter(registration=registration, session=session).exists():
+        messages.warning(request, "You have already checked in for this session.")
+        return redirect('core:participant-portal', uuid=uuid)
+
+    # 4. Success: Create Attendance (scanned_by is None)
+    Attendance.objects.create(
+        registration=registration,
+        session=session,
+        scanned_by=None # Indicates Self Check-In
+    )
+    
+    messages.success(request, f"Successfully checked in for {session.title}!")
+    return redirect('core:participant-portal', uuid=uuid)
+
+def export_attendance_csv(request, pk):
+    event = get_object_or_404(Event, pk=pk)
+    
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{event.title}_attendance.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Name', 'Email', 'Status', 'Check-In Time', 'Session'])
+
+    registrations = event.registrations.all().select_related('participant')
+    
+    for reg in registrations:
+        # Get check-in times if exists
+        attendances = reg.attendances.all()
+        if attendances:
+            for att in attendances:
+                writer.writerow([
+                    reg.participant.name, 
+                    reg.participant.email, 
+                    reg.status, 
+                    att.checked_in_at, 
+                    att.session.title
+                ])
+        else:
+            writer.writerow([
+                reg.participant.name, 
+                reg.participant.email, 
+                reg.status, 
+                'Not Checked In', 
+                '-'
+            ])
+
+    return response
 
 def download_ticket_pdf(request, uuid):
     registration = get_object_or_404(Registration, uuid=uuid)
@@ -422,11 +515,24 @@ def participant_portal(request, uuid):
     """
     The main hub for a participant to view agenda and download resources.
     """
-    registration = get_object_or_404(Registration, uuid=uuid)
+    # 1. Optimize Registration fetch (select_related saves queries on event/participant)
+    registration = get_object_or_404(
+        Registration.objects.select_related('event', 'participant'), 
+        uuid=uuid
+    )
     event = registration.event
-    sessions = event.sessions.all()
     
-    # Get all resources for this event
+    # 2. Fetch sessions
+    sessions = event.sessions.all()
+
+    attended_session_ids = set(
+        Attendance.objects.filter(registration=registration).values_list('session_id', flat=True)
+    )
+    
+    # Check if they have attended ANY session (for resource unlocking)
+    has_attended_any = bool(attended_session_ids)
+
+    # 4. Get resources
     resources = event.resources.all().order_by('order')
     
     # Logic: Check what user is allowed to access
@@ -442,14 +548,9 @@ def participant_portal(request, uuid):
         if res.unlock_time and now < res.unlock_time:
             is_locked = True
             
-        # 2. Check Check-In Condition
-        if res.requires_check_in:
-            # Has the user attended ANY session of this event?
-            # Or specifically the session linked to the resource?
-            # Let's check if they have ANY attendance for this event.
-            attended = Attendance.objects.filter(registration=registration).exists()
-            if not attended:
-                is_locked = True
+        # 2. Check Check-In Condition (Use the boolean flag, NO DB QUERY HERE)
+        if res.requires_check_in and not has_attended_any:
+            is_locked = True
         
         if is_locked:
             locked_resources.append(res.id)
@@ -460,6 +561,7 @@ def participant_portal(request, uuid):
         'sessions': sessions,
         'resources': resources,
         'locked_resources': locked_resources,
+        'attended_session_ids': attended_session_ids, # Pass this for the template
         'now': now,
     }
     return render(request, 'core/portal/participant_portal.html', context)
@@ -532,3 +634,41 @@ def find_ticket(request):
     
     return render(request, 'core/find_ticket.html')
 
+
+class AttendanceListView(StaffRequiredMixin, DetailView):
+    model = Event
+    template_name = 'core/dashboard/attendance_list.html'
+    context_object_name = 'event'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        event = self.object
+        
+        # Get all attendance records for this event, ordered by most recent
+        attendances = Attendance.objects.filter(
+            session__event=event
+        ).select_related(
+            'registration__participant', 'session', 'scanned_by'
+        ).order_by('-checked_in_at')
+        
+        context['attendances'] = attendances
+        
+        # Optional: Stats per session
+        session_stats = event.sessions.annotate(
+            scan_count=Count('attendances')
+        ).values('title', 'scan_count', 'start_time')
+        
+        context['session_stats'] = session_stats
+        
+        return context
+    
+class StaffHomeView(StaffRequiredMixin, ListView):
+    model = Event
+    template_name = 'core/dashboard/staff_home.html'
+    context_object_name = 'events'
+
+    def get_queryset(self):
+        return Event.objects.all().annotate(
+            total_reg=Count('registrations'),
+            approved_reg=Count('registrations', filter=Q(registrations__status='approved'))
+        ).order_by('-start_date')

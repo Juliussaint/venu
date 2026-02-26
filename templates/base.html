@@ -36,15 +36,15 @@
                 </div>
                 
                 <!-- Navigation -->
-                <nav class="hidden md:flex space-x-8">
+                <nav class="space-x-8">
                     <a href="{% url 'core:event-list' %}" class="text-zinc-600 hover:text-indigo-600 transition-colors duration-150 font-medium">Events</a>
                     
                     <a href="{% url 'core:find-ticket' %}" class="text-zinc-600 hover:text-indigo-600 transition-colors duration-150 font-medium">Find My Ticket</a>
 
                     {% if user.is_staff %}
-                    <a href="#" class="text-zinc-600 hover:text-indigo-600 transition-colors duration-150 font-medium">
-                        Dashboards
-                    </a>
+                        <a href="{% url 'core:staff-home' %}" class="text-zinc-600 hover:text-indigo-600 transition-colors duration-150 font-medium">
+                            Dashboard
+                        </a>
                     {% endif %}
                 </nav>
 
@@ -67,7 +67,8 @@
     <footer class="bg-white border-t border-zinc-200 mt-auto">
         <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
             <p class="text-center text-sm text-zinc-500">
-                &copy; 2026 VENU Platform. Built with Django 5.2 + Tailwind CSS.
+                &copy; 2026 VENU Platform. 
+                <a href="https://megageniusdigital.com" target="_blank" class="text-indigo-600 hover:text-indigo-800">Built by MGD Digital Agency. All rights reserved.</a>
             </p>
         </div>
     </footer>

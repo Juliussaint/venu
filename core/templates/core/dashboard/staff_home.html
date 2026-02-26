@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="py-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 class="text-3xl font-bold text-zinc-900 mb-6">Staff Dashboard</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for event in events %}
+            <div class="bg-white rounded-xl shadow-sm ring-1 ring-zinc-200 p-6 hover:shadow-md transition-shadow">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-zinc-900">{{ event.title }}</h3>
+                        <p class="text-sm text-zinc-500">{{ event.start_date }}</p>
+                    </div>
+                    {% if not event.is_published %}
+                    <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">Draft</span>
+                    {% endif %}
+                </div>
+
+                <div class="flex space-x-4 text-sm text-zinc-600 mb-4">
+                    <div>
+                        <span class="font-bold text-zinc-900">{{ event.total_reg }}</span> Registered
+                    </div>
+                    <div>
+                        <span class="font-bold text-green-600">{{ event.approved_reg }}</span> Approved
+                    </div>
+                </div>
+
+                <div class="flex gap-2">
+                    <a href="{% url 'core:event-dashboard' event.pk %}" class="flex-1 text-center px-3 py-2 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-100">
+                        Manage
+                    </a>
+                    <a href="{% url 'core:staff-checkin' event.pk %}" class="flex-1 text-center px-3 py-2 bg-green-50 text-green-700 rounded-lg text-sm font-medium hover:bg-green-100">
+                        Scan
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-3 text-center py-10 text-zinc-500">
+                No events created yet.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

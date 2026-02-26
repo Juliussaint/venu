@@ -11,34 +11,61 @@
                 <p class="mt-2 text-sm text-zinc-500">Manage registrations and view statistics.</p>
             </div>
             <div class="mt-3 sm:mt-0 sm:ml-4 flex gap-3">
-                <!-- NEW: Check-In Button -->
-                <a href="{% url 'core:staff-checkin' event.pk %}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                    🔍 Open Scanner
+                <a href="{% url 'core:attendance-list' event.pk %}" class="inline-flex items-center px-4 py-2 border border-zinc-300 rounded-lg shadow-sm text-sm font-medium text-zinc-700 bg-white hover:bg-zinc-50">
+                    📋 Attendance List
                 </a>
-            </div>
-            <div class="mt-3 sm:mt-0 sm:ml-4">
-                <a href="{% url 'core:event-detail' event.slug %}" class="text-sm text-indigo-600 hover:underline">View Public Page &rarr;</a>
+                <a href="{% url 'core:event-detail' event.slug %}" class="text-sm text-indigo-600 hover:underline self-center">View Public Page &rarr;</a>
             </div>
         </div>
 
-        <!-- Stats Cards -->
-        <div class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-3">
+        <!-- STATS SECTION (Auto-Refresh via HTMX) -->
+        <!-- This section reloads itself every 30 seconds -->
+        <div id="stats-container" 
+             class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4"
+             hx-get="{% url 'core:event-dashboard' event.pk %}" 
+             hx-trigger="every 30s"
+             hx-select="#stats-container"
+             hx-swap="outerHTML">
+
+            <!-- Card 1: Total Registered -->
             <div class="bg-white overflow-hidden shadow rounded-lg">
                 <div class="px-4 py-5 sm:p-6">
                     <dt class="text-sm font-medium text-zinc-500 truncate">Total Registered</dt>
                     <dd class="mt-1 text-3xl font-semibold text-zinc-900">{{ total_count }}</dd>
                 </div>
             </div>
+
+            <!-- Card 2: Approval Rate (Visual) -->
             <div class="bg-white overflow-hidden shadow rounded-lg">
                 <div class="px-4 py-5 sm:p-6">
-                    <dt class="text-sm font-medium text-zinc-500 truncate">Approved</dt>
-                    <dd class="mt-1 text-3xl font-semibold text-green-600">{{ approved_count }}</dd>
+                    <dt class="text-sm font-medium text-zinc-500 truncate">Approval Rate</dt>
+                    <dd class="mt-1 text-3xl font-semibold text-indigo-600">{{ approval_rate }}%</dd>
+                    <div class="w-full bg-zinc-200 rounded-full h-2 mt-2">
+                        <div class="bg-indigo-600 h-2 rounded-full transition-all duration-500" style="width: {{ approval_rate }}%"></div>
+                    </div>
                 </div>
             </div>
+
+            <!-- Card 3: Checked In (Visual) -->
             <div class="bg-white overflow-hidden shadow rounded-lg">
                 <div class="px-4 py-5 sm:p-6">
-                    <dt class="text-sm font-medium text-zinc-500 truncate">Pending</dt>
-                    <dd class="mt-1 text-3xl font-semibold text-yellow-600">{{ pending_count }}</dd>
+                    <dt class="text-sm font-medium text-zinc-500 truncate">Checked In</dt>
+                    <dd class="mt-1 text-3xl font-semibold text-green-600">{{ checked_in_count }}</dd>
+                    <div class="w-full bg-zinc-200 rounded-full h-2 mt-2">
+                        <div class="bg-green-600 h-2 rounded-full transition-all duration-500" style="width: {{ checkin_rate }}%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 4: Quick Actions -->
+            <div class="bg-white overflow-hidden shadow rounded-lg flex flex-col justify-center p-4">
+                <div class="space-y-2">
+                    <a href="{% url 'core:staff-checkin' event.pk %}" class="w-full inline-flex justify-center items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 shadow-sm">
+                        🔍 Open Scanner
+                    </a>
+                    <a href="{% url 'core:export-csv' event.pk %}" class="w-full inline-flex justify-center items-center px-4 py-2 bg-zinc-800 text-white text-sm font-medium rounded-lg hover:bg-zinc-700 shadow-sm">
+                        ⬇️ Export CSV
+                    </a>
                 </div>
             </div>
         </div>

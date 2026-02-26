@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="py-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Header -->
+        <div class="pb-5 border-b border-zinc-200 sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-zinc-900">Attendance History</h1>
+                <p class="mt-2 text-sm text-zinc-500">{{ event.title }}</p>
+            </div>
+            <div class="mt-3 sm:mt-0 sm:ml-4 flex gap-3">
+                <a href="{% url 'core:event-dashboard' event.pk %}" class="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg bg-zinc-100 text-zinc-700 hover:bg-zinc-200">
+                    &larr; Back to Dashboard
+                </a>
+                <a href="{% url 'core:staff-checkin' event.pk %}" class="inline-flex items-center px-4 py-1.5 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700">
+                    🔍 Open Scanner
+                </a>
+            </div>
+        </div>
+
+        <!-- Session Stats Cards (Optional) -->
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+            {% for stat in session_stats %}
+            <div class="bg-white p-4 rounded-lg shadow-sm ring-1 ring-zinc-200">
+                <p class="text-xs text-zinc-500 font-medium">{{ stat.title }}</p>
+                <p class="text-2xl font-bold text-indigo-600">{{ stat.scan_count }} <span class="text-sm font-normal text-zinc-400">checked in</span></p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Attendance Table -->
+        <div class="mt-8 flow-root">
+            <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+                <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+                    <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
+                        <table class="min-w-full divide-y divide-zinc-300">
+                            <thead class="bg-zinc-50">
+                                <tr>
+                                    <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-zinc-900 sm:pl-6">Participant</th>
+                                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-zinc-900">Session</th>
+                                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-zinc-900">Check-In Time</th>
+                                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-zinc-900">Scanned By</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-zinc-200 bg-white">
+                                {% for record in attendances %}
+                                <tr>
+                                    <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm sm:pl-6">
+                                        <div class="font-medium text-zinc-900">{{ record.registration.participant.name }}</div>
+                                        <div class="text-zinc-500">{{ record.registration.participant.email }}</div>
+                                    </td>
+                                    <td class="whitespace-nowrap px-3 py-4 text-sm text-zinc-500">
+                                        {{ record.session.title }}
+                                    </td>
+                                    <td class="whitespace-nowrap px-3 py-4 text-sm text-zinc-500">
+                                        {{ record.checked_in_at|time:"H:i" }}
+                                    </td>
+                                    <!-- NEW: Method Column -->
+                                    <td class="whitespace-nowrap px-3 py-4 text-sm">
+                                        {% if record.scanned_by %}
+                                            <span class="text-indigo-600 font-medium">{{ record.scanned_by.username }}</span>
+                                            <span class="text-xs text-zinc-400 block">Staff Scan</span>
+                                        {% else %}
+                                            <span class="text-green-600 font-medium">Self Check-In</span>
+                                            <span class="text-xs text-zinc-400 block">App</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-10 text-zinc-500">
+                                        No one has checked in yet.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

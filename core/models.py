@@ -133,7 +133,14 @@ class Attendance(models.Model):
     session = models.ForeignKey('Session', on_delete=models.CASCADE, related_name='attendances')
     
     checked_in_at = models.DateTimeField(auto_now_add=True)
-    scanned_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    
+    scanned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        help_text="Staff member who scanned. Blank if self-check-in."
+    )
 
     class Meta:
         # Prevent checking in twice for the same session

@@ -6,6 +6,11 @@ from .models import (
     RegistrationAnswer, Resource
 )
 
+
+admin.site.site_header = "Venu Event Management"
+admin.site.site_title = "Venu Admin"
+admin.site.index_title = "Venu Dashboard"
+
 # --- INLINES ---
 
 class SessionInline(admin.TabularInline):
