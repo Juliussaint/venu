@@ -10,6 +10,7 @@ from .forms import RegistrationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import HttpResponse
+from django.db import transaction, IntegrityError
 
 import qrcode
 from io import BytesIO
@@ -264,24 +265,40 @@ def process_check_in(request, uuid):
             'registration': registration
         })
 
-    # 3. Validation: Duplicate?
-    if Attendance.objects.filter(registration=registration, session=active_session).exists():
+    # 3. Validation & Creation (Concurrency Safe)
+    try:
+        # Use atomic to ensure this block runs as a single unit
+        with transaction.atomic():
+            # Check duplicate strictly inside the transaction
+            if Attendance.objects.filter(registration=registration, session=active_session).exists():
+                 return render(request, 'core/dashboard/partials/check_in_result.html', {
+                    'success': False,
+                    'message': f"Already checked in for {active_session.title}!",
+                    'registration': registration
+                })
+            
+            # Create Attendance
+            Attendance.objects.create(
+                registration=registration,
+                session=active_session,
+                scanned_by=request.user
+            )
+            
+            message = f"Welcome! Checked in for {active_session.title}"
+
+    except IntegrityError:
+        # This triggers if two staff scanned at the EXACT same millisecond
+        message = f"Already checked in for {active_session.title}! (Concurrent Scan)"
+        
         return render(request, 'core/dashboard/partials/check_in_result.html', {
             'success': False,
-            'message': f"Already checked in for {active_session.title}!",
+            'message': message,
             'registration': registration
         })
 
-    # 4. Success: Create Attendance
-    Attendance.objects.create(
-        registration=registration,
-        session=active_session,
-        scanned_by=request.user
-    )
-
     return render(request, 'core/dashboard/partials/check_in_result.html', {
         'success': True,
-        'message': f"Welcome! Checked in for {active_session.title}",
+        'message': message,
         'registration': registration
     })
 
